@@ -3,18 +3,9 @@ from src.Http.ResponseObject import Response
 import requests
 
 class Api:
-    _BASE_URL = 'https://api.shiptheory.com/v1/'
-    _headers = {
-            'User-Agent': 'Shiptheory Python',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
+    _BASE_URL = 'https://api.twitter.com/2/'
 
-    def __init__(self, token: AccessToken = None):
-        if (token and isinstance(token.token, str)):
-            self._headers['Authorization'] = 'Bearer ' + token.token
-
-    def get(self, endpoint: str) -> Response:
+    def get(self, endpoint: str, headers: dict) -> Response:
         """ 
         Sends a get request to the specified endpoint of the Shiptheory API
         :param `endpoint`: Endpoint to hit
@@ -22,7 +13,7 @@ class Api:
         """
         url = self._BASE_URL + endpoint        
         response = Response()
-        res = requests.get(url, headers = self._headers)
+        res = requests.get(url, headers = headers)
         response.url = res.url
         response.code = res.status_code
 
@@ -34,7 +25,7 @@ class Api:
         response.body = res.json()
         return response
 
-    def post(self, endpoint: str, data: str) -> Response:
+    def post(self, endpoint: str, data: str, headers: dict) -> Response:
         """ 
         Sends a post request to the specified endpoint of the Shiptheory API
         :param `endpoint`: Endpoint to hit
@@ -43,7 +34,7 @@ class Api:
         """
         url = self._BASE_URL + endpoint        
         response = Response()
-        res = requests.post(url, headers=self._headers, data=data)
+        res = requests.post(url, headers=headers, data=data)
         response.url = res.url
         response.code = res.status_code
 
@@ -55,7 +46,7 @@ class Api:
         response.body = res.json()
         return response
 
-    def put(self, endpoint: str, data: str) -> Response:
+    def put(self, endpoint: str, data: str, headers: dict) -> Response:
         """ 
         Sends a put request to the specified endpoint of the Shiptheory API
         :param `endpoint`: Endpoint to hit
@@ -64,7 +55,7 @@ class Api:
         """
         url = self._BASE_URL + endpoint        
         response = Response()
-        res = requests.put(url, headers=self._headers, data=data)
+        res = requests.put(url, headers=headers, data=data)
         response.url = res.url
         response.code = res.status_code
 
