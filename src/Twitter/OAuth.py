@@ -1,11 +1,11 @@
-from hashlib import sha1
-import hmac
-import random
-import string
-import time
+from base64 import b64encode
+from hmac import digest
+from random import choice
+from string import ascii_uppercase, ascii_lowercase, digits
+from time import time
 from dotenv import load_dotenv
-import os
-import urllib.parse
+from os import getenv
+from urllib.parse import quote
 
 class OAuth:
     """
@@ -19,22 +19,23 @@ class OAuth:
     _oauth_consumer_secret = ''
     _http_method = ''
     _url = ''
+    _data = {}
 
-    def __init__(self, method, url) -> None:
+    def __init__(self, method, url, data) -> None:
         load_dotenv
-        self._oauth_consumer_key = os.getenv('OAUTH_CONSUMER_KEY')
-        self._oauth_consumer_secret = os.getenv('OAUTH_CONSUMER_SECRET')
-        self._oauth_token = os.getenv('OAUTH_TOKEN')
-        self._oauth_token_secret = os.getenv('OAUTH_TOKEN_SECRET')
+        self._oauth_consumer_key = getenv('OAUTH_CONSUMER_KEY')
+        self._oauth_consumer_secret = getenv('OAUTH_CONSUMER_SECRET')
+        self._oauth_token = getenv('OAUTH_TOKEN')
+        self._oauth_token_secret = getenv('OAUTH_TOKEN_SECRET')
         self._http_method = method
         self._url = url
+        self._data = data
 
     def createAuthorizationString(self) -> str:
         """Create an OAUTH 1.0 Authorization string"""
         params = {
             'oauth_consumer_key': self._oauth_consumer_key,
             'oauth_nonce': self._generateNonce(),
-            'oauth_signature': '',
             'oauth_signature_method': self._OAUTH_SIGANTURE_METHOD,
             'oauth_timestamp': self._generateTimeStamp(),
             'oauth_token': self._oauth_token,
@@ -42,19 +43,22 @@ class OAuth:
         }
 
         params_string = self._generateParamsString(params)
-        unencoded_signature = self._generateSignature(params_string)
+        signature = self._generateSignature(params_string)
         signing_key = self._generateSigningKey()
-        hashed_signature = hmac.new(bytes(signing_key), bytes(unencoded_signature), sha1)
-        params['oauth_signature'] = hashed_signature.digest().encode("base64").rstrip('\n')
+
+        byte_signature = signature.encode('utf-8')
+        byte_key = signing_key.encode('utf-8')
+
+        hashed_signature = digest(byte_key, byte_signature, 'sha1')
+        params['oauth_signature'] = b64encode(hashed_signature).decode('utf-8')
         
         auth_string = 'OAuth '
-        for i in params:
-            auth_string += urllib.parse.quote(i) + '="' + urllib.parse.quote(params[i]) + '",'
+        for i in sorted(params):
+            auth_string += quote(i) + '="' + quote(params[i]) + '", '
 
-        return auth_string.rstrip(',')
+        return auth_string.rstrip(', ')
 
-
-    def _generateParamsString(params: dict) -> str:
+    def _generateParamsString(self, params: dict) -> str:
         """
         Generate a params string which used in the process of genrating the OAuth signature
         @param dict `params`
@@ -62,11 +66,11 @@ class OAuth:
         if 'oauth_signature' in params:
             del params['oauth_signature']
 
-        full_params = {{'include_entities':'true'} | params}
+        full_params = {**self._data, **params}
 
         encoded_params = {}
         for i in full_params:
-            encoded_params[urllib.parse.quote(i)] = urllib.parse.quote(full_params[i])
+            encoded_params[quote(i)] = quote(full_params[i])
 
         sorted_params =  {}
         for j in sorted(encoded_params):
@@ -78,32 +82,34 @@ class OAuth:
 
         return params_string.rstrip('&')
 
-    def _generateNonce():
+    def _generateNonce(self) -> str:
         """
         Generates a random 36 character string to be used as an OAuth nonce
         """
-        return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(36))
+        return ''.join(choice(ascii_uppercase + digits + ascii_lowercase) for _ in range(36))
 
-    def _generateSignature(self, params_string):
+    def _generateSignature(self, params_string) -> str:
         """
-        Generates a signature string to be SHA-1 hashed
+        Generates a signature string
         @param string `params_string`
         """
         signature = self._http_method.upper() + '&'
-        signature += urllib.parse.quote(self._url) + '&'
-        signature += urllib.parse.quote(params_string)
+        signature += quote(self._url) + '&'
+        signature += quote(params_string)
         return signature
 
-    def _generateTimeStamp():
+    def _generateTimeStamp(self) -> str:
         """
         Generates a unix timestamp
         """
-        return int(time.time())
+        # Convert to int first to remove floating point 
+        # Then convert to string as will be concatenated with other strings
+        return str(int(time()))
 
-    def _generateSigningKey(self):
+    def _generateSigningKey(self) -> str:
         """
-        Generate a key used to sign the params string when SHA-1 encrypting
+        Generate a key used to sign the params string when encrypting
         """
-        encoded_consumer_secret = urllib.parse.quote(self._oauth_consumer_secret)
-        encoded_token_secret = urllib.parse.quote(self._oauth_token_secret)
-        return encoded_consumer_secret + encoded_token_secret
+        encoded_consumer_secret = quote(self._oauth_consumer_secret)
+        encoded_token_secret = quote(self._oauth_token_secret)
+        return encoded_consumer_secret + '&' + encoded_token_secret
