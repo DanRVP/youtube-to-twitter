@@ -2,7 +2,10 @@ from src.Http.ResponseObject import Response
 import requests
 
 class Api:
-    BASE_URL = 'https://api.twitter.com/2/'
+    _base_url = ''
+
+    def __init__(self, url) -> None:
+        pass
 
     def get(self, endpoint: str, headers: dict) -> Response:
         """ 
@@ -10,7 +13,7 @@ class Api:
         :param `endpoint`: Endpoint to hit
         :return `Response`: object
         """
-        url = self.BASE_URL + endpoint        
+        url = self._base_url + endpoint        
         response = Response()
         res = requests.get(url, headers = headers)
         response.url = res.url
@@ -30,7 +33,7 @@ class Api:
         :param `data`: JSON string of data
         :return `Response`: object
         """
-        url = self.BASE_URL + endpoint        
+        url = self._base_url + endpoint        
         response = Response()
         res = requests.post(url, headers=headers, json=data)
         response.url = res.url
@@ -50,7 +53,7 @@ class Api:
         :param `data`: JSON string of data
         :return `Response`: object
         """
-        url = self.BASE_URL + endpoint        
+        url = self._base_url + endpoint        
         response = Response()
         res = requests.put(url, headers=headers, json=data)
         response.url = res.url
